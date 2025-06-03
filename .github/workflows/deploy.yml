@@ -1,4 +1,4 @@
-name: Build, Push to Docker Hub & Sync to ECR
+name: Build, Push to Docker Hub & then to ECR
 
 on:
   push:
