@@ -1,0 +1,61 @@
+name: Build, Push & Deploy to AWS App Runner
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  IMAGE_NAME: potluriujwala/awsapp
+  IMAGE_TAG: build-${{ github.run_number }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build Docker Image
+        run: docker build -t ${{ env.IMAGE_NAME }}:${{ github.run_number }} .
+
+      - name: Push Docker Image to Docker Hub
+        run: docker push ${{ env.IMAGE_NAME }}:${{ github.run_number }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Create or update App Runner service
+        run: |
+          SERVICE_NAME="test_deployment"
+          IMAGE_TAG="docker.io/${{ env.IMAGE_NAME }}:${{ github.run_number }}"
+
+          SERVICE_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='$SERVICE_NAME'].ServiceArn" --output text)
+
+          cat > service.yaml <<EOF
+          version: 1.0
+          resources:
+            service:
+              name: $SERVICE_NAME
+              source:
+                image_repository:
+                  image_identifier: $IMAGE_TAG
+                  image_repository_type: IMAGE_REPOSITORY
+                  port: 5000
+          EOF
+
+          if [ -z "$SERVICE_ARN" ]; then
+            echo "Creating new App Runner service..."
+            aws apprunner create-service --cli-input-yaml file://service.yaml
+          else
+            echo "Updating existing App Runner service..."
+            aws apprunner update-service --service-arn $SERVICE_ARN --cli-input-yaml file://service.yaml
+          fi
