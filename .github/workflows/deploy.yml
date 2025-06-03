@@ -1,4 +1,4 @@
-name: Build, Push & Deploy to AWS App Runner
+name: Build, Push to Docker Hub & Sync to ECR
 
 on:
   push:
@@ -6,11 +6,15 @@ on:
       - main
 
 env:
-  IMAGE_NAME: potluriujwala/awsapp
-  IMAGE_TAG: build-${{ github.run_number }}
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  DOCKERHUB_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}         # Now a secret
+  ECR_REPOSITORY: test
+  DOCKERHUB_IMAGE_NAME: potluriujwala/awsapp
 
 jobs:
-  build-and-deploy:
+  build-push-sync:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,42 +22,33 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Log in to Docker Hub
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+        run: echo "${{ env.DOCKERHUB_PASSWORD }}" | docker login -u "${{ env.DOCKERHUB_USERNAME }}" --password-stdin
 
-      - name: Build Docker Image
-        run: docker build -t ${{ env.IMAGE_NAME }}:${{ github.run_number }} .
+      - name: Build Docker image
+        run: docker build -t ${{ env.DOCKERHUB_IMAGE_NAME }}:${{ github.run_number }} .
 
-      - name: Push Docker Image to Docker Hub
-        run: docker push ${{ env.IMAGE_NAME }}:${{ github.run_number }}
+      - name: Push Docker image to Docker Hub
+        run: docker push ${{ env.DOCKERHUB_IMAGE_NAME }}:${{ github.run_number }}
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Create or update App Runner service
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Pull image from Docker Hub
+        run: docker pull ${{ env.DOCKERHUB_IMAGE_NAME }}:${{ github.run_number }}
+
+      - name: Tag image for ECR
         run: |
-          SERVICE_NAME="test_deployment"
-          IMAGE_TAG="docker.io/${{ env.IMAGE_NAME }}:${{ github.run_number }}"
+          ECR_IMAGE_NAME=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}
+          docker tag ${{ env.DOCKERHUB_IMAGE_NAME }}:${{ github.run_number }} $ECR_IMAGE_NAME:${{ github.run_number }}
 
-          SERVICE_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='$SERVICE_NAME'].ServiceArn" --output text)
-
-          cat > service.yaml <<EOF
-          ServiceName: $SERVICE_NAME
-          SourceConfiguration:
-            ImageRepository:
-              ImageIdentifier: $IMAGE_TAG
-              ImageRepositoryType: IMAGE_REPOSITORY
-              ImageConfiguration:
-                Port: "5000"
-          EOF
-
-          if [ -z "$SERVICE_ARN" ]; then
-            echo "Creating new App Runner service..."
-            aws apprunner create-service --cli-input-yaml file://service.yaml
-          else
-            echo "Updating existing App Runner service..."
-            aws apprunner update-service --service-arn $SERVICE_ARN --cli-input-yaml file://service.yaml
-          fi
+      - name: Push image to ECR
+        run: |
+          ECR_IMAGE_NAME=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}
+          docker push $ECR_IMAGE_NAME:${{ github.run_number }}
