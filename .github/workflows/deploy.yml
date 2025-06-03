@@ -46,9 +46,9 @@ jobs:
       - name: Tag image for ECR
         run: |
           ECR_IMAGE_NAME=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}
-          docker tag ${{ env.DOCKERHUB_IMAGE_NAME }}:${{ github.run_number }} $ECR_IMAGE_NAME:${{ github.run_number }}
+          docker tag ${{ env.DOCKERHUB_IMAGE_NAME }}:${{ github.run_number }} $ECR_IMAGE_NAME:latest
 
       - name: Push image to ECR
         run: |
           ECR_IMAGE_NAME=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}
-          docker push $ECR_IMAGE_NAME:${{ github.run_number }}
+          docker push $ECR_IMAGE_NAME:latest
