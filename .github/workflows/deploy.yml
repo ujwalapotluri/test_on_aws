@@ -41,15 +41,13 @@ jobs:
           SERVICE_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='$SERVICE_NAME'].ServiceArn" --output text)
 
           cat > service.yaml <<EOF
-          version: 1.0
-          resources:
-            service:
-              name: $SERVICE_NAME
-              source:
-                image_repository:
-                  image_identifier: $IMAGE_TAG
-                  image_repository_type: IMAGE_REPOSITORY
-                  port: 5000
+          ServiceName: $SERVICE_NAME
+          SourceConfiguration:
+            ImageRepository:
+              ImageIdentifier: $IMAGE_TAG
+              ImageRepositoryType: IMAGE_REPOSITORY
+              ImageConfiguration:
+                Port: "5000"
           EOF
 
           if [ -z "$SERVICE_ARN" ]; then
