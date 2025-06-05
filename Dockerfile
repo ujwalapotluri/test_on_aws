@@ -1,4 +1,4 @@
-FROM potluriujwala/app-base:latest
+FROM potluriujwala/base:latest
 
 WORKDIR /app
 
