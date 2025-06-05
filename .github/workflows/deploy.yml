@@ -37,7 +37,7 @@ jobs:
       - name: Push Docker base image to Docker Hub if requirements.txt changes
         if: steps.requirements-check.outputs.changed == 'true'
         run: |
-          docker build -f dockerfile.base -t ${{ env.DOCKERHUB_BASE_IMAGE_NAME }}:latest .
+          docker build -f Dockerfile.base -t ${{ env.DOCKERHUB_BASE_IMAGE_NAME }}:latest .
           docker push ${{ env.DOCKERHUB_BASE_IMAGE_NAME }}:latest
           
       - name: Build Docker image
