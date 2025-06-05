@@ -12,6 +12,7 @@ env:
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
   ECR_REPOSITORY: test
   DOCKERHUB_IMAGE_NAME: potluriujwala/awsapp
+  DOCKERHUB_BASE_IMAGE_NAME: potluriujwala/base
 
 jobs:
   build-push-sync:
@@ -23,7 +24,22 @@ jobs:
 
       - name: Log in to Docker Hub
         run: echo "${{ env.DOCKERHUB_PASSWORD }}" | docker login -u "${{ env.DOCKERHUB_USERNAME }}" --password-stdin
-
+      
+      - name: Check if requirements.txt has changed
+        id: requirements-check
+        run: |
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q '^requirements.txt$'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi 
+      
+      - name: Push Docker base image to Docker Hub if requirements.txt changes
+        if: steps.requirements-check.outputs.changed == 'true'
+        run: |
+          docker build -f dockerfile.base -t ${{ env.DOCKERHUB_BASE_IMAGE_NAME }}:latest .
+          docker push ${{ env.DOCKERHUB_BASE_IMAGE_NAME }}:latest
+          
       - name: Build Docker image
         run: docker build -t ${{ env.DOCKERHUB_IMAGE_NAME }}:${{ github.run_number }} .
 
