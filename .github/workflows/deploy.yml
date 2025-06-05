@@ -11,6 +11,7 @@ env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
   ECR_REPOSITORY: test
+  ECR_BASE_REPOSITORY: base_test
   DOCKERHUB_IMAGE_NAME: potluriujwala/awsapp
   DOCKERHUB_BASE_IMAGE_NAME: potluriujwala/base
 
@@ -41,6 +42,9 @@ jobs:
         run: |
           docker build -f Dockerfile.base -t ${{ env.DOCKERHUB_BASE_IMAGE_NAME }}:latest .
           docker push ${{ env.DOCKERHUB_BASE_IMAGE_NAME }}:latest
+          ECR_BASE_IMAGE_NAME=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_BASE_REPOSITORY }}
+          docker tag ${{ env.DOCKERHUB_BASE_IMAGE_NAME }}:latest $ECR_BASE_IMAGE_NAME:latest
+          docker push $ECR_IMAGE_NAME:latest
           
       - name: Build Docker image
         run: docker build -t ${{ env.DOCKERHUB_IMAGE_NAME }}:${{ github.run_number }} .
