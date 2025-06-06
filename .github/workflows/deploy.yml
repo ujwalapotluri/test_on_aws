@@ -27,7 +27,17 @@ jobs:
 
       - name: Log in to Docker Hub
         run: echo "${{ env.DOCKERHUB_PASSWORD }}" | docker login -u "${{ env.DOCKERHUB_USERNAME }}" --password-stdin
-      
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+        
       - name: Check if requirements.txt has changed
         id: requirements-check
         run: |
@@ -51,16 +61,6 @@ jobs:
 
       - name: Push Docker image to Docker Hub
         run: docker push ${{ env.DOCKERHUB_IMAGE_NAME }}:${{ github.run_number }}
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v1
 
       - name: Pull image from Docker Hub
         run: docker pull ${{ env.DOCKERHUB_IMAGE_NAME }}:${{ github.run_number }}
