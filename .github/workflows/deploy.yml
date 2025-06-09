@@ -1,9 +1,7 @@
 name: Build and Push to Docker Hub & then to ECR .
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKER_USERNAME }}
