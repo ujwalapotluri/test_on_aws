@@ -6,7 +6,7 @@ on:
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-  ECR_REPOSITORY: test
+  ECR_REPOSITORY: base
   ECR_BASE_REPOSITORY: base_test
 
 jobs:
@@ -29,17 +29,17 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
         
-      - name: Check if requirements.txt has changed
-        id: requirements-check
-        run: |
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q '^requirements.txt$'; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          fi 
+      # - name: Check if requirements.txt has changed
+      #   id: requirements-check
+      #   run: |
+      #     if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q '^requirements.txt$'; then
+      #       echo "changed=true" >> "$GITHUB_OUTPUT"
+      #     else
+      #       echo "changed=false" >> "$GITHUB_OUTPUT"
+      #     fi 
       
       - name: Push base image to ecr if requirements.txt changes
-        if: steps.requirements-check.outputs.changed == 'true'
+        # if: steps.requirements-check.outputs.changed == 'true'
         run: |
           ECR_BASE_IMAGE_NAME=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_BASE_REPOSITORY }}
           docker build -f Dockerfile.base -t $ECR_BASE_IMAGE_NAME:latest .
