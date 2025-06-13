@@ -1,4 +1,4 @@
-FROM potluriujwala/base:latest
+FROM 851725599256.dkr.ecr.ap-south-1.amazonaws.com/base_test:latest
 
 WORKDIR /app
 
